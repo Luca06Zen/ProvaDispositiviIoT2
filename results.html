@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risultati Predizione - Industrial IoT Monitor</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+                <h1>Industrial IoT Failure Prediction</h1>
+                <p class="subtitle">Risultati della Predizione</p>
+            </div>
+        </header>
+
+        <main class="results-main">
+            <div class="results-container">
+                <!-- Sezione Risultati Principali -->
+                <div class="result-card main-result">
+                    <h2>🔍 Risultato Predizione</h2>
+                    <div class="prediction-summary">
+                        <div class="device-info">
+                            <h3>{{ device_type }}</h3>
+                            <p class="device-id">ID: {{ machine_id }}</p>
+                        </div>
+                        
+                        <div class="failure-probability">
+                            <div class="probability-circle" id="probabilityCircle">
+                                <span class="percentage">{{ failure_probability }}%</span>
+                                <span class="label">Probabilità Guasto</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prediction-details">
+                        {% if failure_within_7_days %}
+                        <div class="alert alert-danger">
+                            <strong>⚠️ GUASTO ENTRO 7 GIORNI</strong>
+                        </div>
+                        {% endif %}
+
+                        <div class="remaining-life">
+                            <h4>📅 Vita Rimanente Stimata</h4>
+                            <p class="days-remaining">{{ remaining_life_days }} giorni</p>
+                        </div>
+
+                        <div class="recommended-action">
+                            <h4>🔧 Azione Consigliata</h4>
+                            <p>{{ recommended_action }}</p>
+                        </div>
+
+                        <div class="failure-reason">
+                            <h4>📋 Motivo Principale</h4>
+                            <p>{{ failure_reason }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sezione Grafici -->
+                <div class="charts-section">
+                    <div class="chart-card">
+                        <h3>📊 Analisi Parametri Critici</h3>
+                        <canvas id="parametersChart"></canvas>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>📈 Trend Storico</h3>
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sezione Dettagli Tecnici -->
+                <div class="result-card technical-details">
+                    <h3>🔧 Dettagli Tecnici</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="label">Ore Operative:</span>
+                            <span class="value">{{ operational_hours }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Temperatura:</span>
+                            <span class="value">{{ temperature }}°C</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Vibrazioni:</span>
+                            <span class="value">{{ vibration }} mm/s</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Livello Olio:</span>
+                            <span class="value">{{ oil_level }}%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Ultimo Maintenance:</span>
+                            <span class="value">{{ last_maintenance }} giorni fa</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Errori (30gg):</span>
+                            <span class="value">{{ error_codes }}</span>
+                        </div>
+
+                        {% if laser_intensity %}
+                        <div class="detail-item">
+                            <span class="label">Intensità Laser:</span>
+                            <span class="value">{{ laser_intensity }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if hydraulic_pressure %}
+                        <div class="detail-item">
+                            <span class="label">Pressione Idraulica:</span>
+                            <span class="value">{{ hydraulic_pressure }} bar</span>
+                        </div>
+                        {% endif %}
+
+                        {% if coolant_flow %}
+                        <div class="detail-item">
+                            <span class="label">Flusso Refrigerante:</span>
+                            <span class="value">{{ coolant_flow }} L/min</span>
+                        </div>
+                        {% endif %}
+
+                        {% if heat_index %}
+                        <div class="detail-item">
+                            <span class="label">Indice Calore:</span>
+                            <span class="value">{{ heat_index }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Sezione Raccomandazioni -->
+                <div class="result-card recommendations">
+                    <h3>💡 Raccomandazioni</h3>
+                    <div class="recommendations-list">
+                        {% for recommendation in recommendations %}
+                        <div class="recommendation-item">
+                            <span class="priority priority-{{ recommendation.priority }}">{{ recommendation.priority.upper() }}</span>
+                            <p>{{ recommendation.text }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Pulsanti Azione -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        📄 Stampa Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.history.back()">
+                        ← Nuova Predizione
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        💾 Esporta Dati
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Dati passati dal backend
+        const resultData = {
+            failure_probability: {{ failure_probability }},
+            parameters: {{ parameters | tojsonfilter | safe }},
+            trend_data: {{ trend_data | tojsonfilter | safe }}
+        };
+
+        // Inizializza i grafici
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeProbabilityCircle();
+            initializeParametersChart();
+            initializeTrendChart();
+        });
+
+        function initializeProbabilityCircle() {
+            const circle = document.getElementById('probabilityCircle');
+            const percentage = resultData.failure_probability;
+            
+            // Applica colore basato sulla probabilità
+            if (percentage >= 70) {
+                circle.classList.add('high-risk');
+            } else if (percentage >= 40) {
+                circle.classList.add('medium-risk');
+            } else {
+                circle.classList.add('low-risk');
+            }
+        }
+
+        function initializeParametersChart() {
+            const ctx = document.getElementById('parametersChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: Object.keys(resultData.parameters),
+                    datasets: [{
+                        label: 'Valori Attuali',
+                        data: Object.values(resultData.parameters),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        pointBackgroundColor: '#3498db',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#3498db'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: resultData.trend_data.labels,
+                    datasets: [{
+                        label: 'Probabilità Guasto (%)',
+                        data: resultData.trend_data.values,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                device_type: '{{ device_type }}',
+                machine_id: '{{ machine_id }}',
+                failure_probability: {{ failure_probability }},
+                failure_within_7_days: {{ failure_within_7_days | tojsonfilter }},
+                remaining_life_days: {{ remaining_life_days }},
+                recommended_action: '{{ recommended_action }}',
+                failure_reason: '{{ failure_reason }}',
+                parameters: {{ parameters | tojsonfilter | safe }}
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `prediction_${data.machine_id}_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+
+    <style>
+        .results-main {
+            padding: 2rem 0;
+        }
+
+        .results-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .main-result {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .prediction-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .device-info h3 {
+            font-size: 2rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .device-id {
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        .probability-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 8px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .probability-circle.high-risk {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        .probability-circle.medium-risk {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+        }
+
+        .probability-circle.low-risk {
+            border-color: #27ae60;
+            background: rgba(39, 174, 96, 0.2);
+        }
+
+        .percentage {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        .label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .prediction-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .alert-danger {
+            background: rgba(231, 76, 60, 0.2);
+            border: 2px solid #e74c3c;
+        }
+
+        .days-remaining {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #f39c12;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .detail-item .label {
+            font-weight: 600;
+        }
+
+        .detail-item .value {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .recommendations-list {
+            space-y: 1rem;
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .priority {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .priority-high {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #f39c12;
+            color: white;
+        }
+
+        .priority-low {
+            background: #27ae60;
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .prediction-summary {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>

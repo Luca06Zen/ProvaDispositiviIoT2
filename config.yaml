@@ -1,0 +1,156 @@
+# Configuration file per Industrial IoT Failure Prediction
+
+# Dataset configuration
+data:
+  raw_data_path: "data/raw/industrial_iot_dataset.csv"
+  processed_data_path: "data/processed/"
+  train_data_file: "train_data.csv"
+  test_data_file: "test_data.csv"
+  cleaned_data_file: "cleaned_data.csv"
+
+# Model configuration
+model:
+  models_path: "data/models/"
+  model_file: "failure_prediction_model.pkl"
+  scaler_file: "scaler.pkl" 
+  label_encoder_file: "label_encoder.pkl"
+  algorithm: "RandomForest"  # Options: RandomForest, SVM, LogisticRegression, DecisionTree
+  test_size: 0.2
+  random_state: 42
+  cross_validation_folds: 5
+
+# Model hyperparameters
+hyperparameters:
+  RandomForest:
+    n_estimators: 100
+    max_depth: 10
+    min_samples_split: 5
+    min_samples_leaf: 2
+    random_state: 42
+  
+  SVM:
+    C: 1.0
+    kernel: 'rbf'
+    gamma: 'scale'
+    random_state: 42
+  
+  LogisticRegression:
+    C: 1.0
+    max_iter: 1000
+    random_state: 42
+  
+  DecisionTree:
+    max_depth: 10
+    min_samples_split: 5
+    min_samples_leaf: 2
+    random_state: 42
+
+# Feature engineering
+features:
+  # Caratteristiche comuni per tutti i dispositivi
+  common_features:
+    - "Installation_Year"
+    - "Operational_Hours"
+    - "Temperature_C"
+    - "Vibration_mms"
+    - "Sound_dB"
+    - "Oil_Level_pct"
+    - "Coolant_Level_pct"
+    - "Power_Consumption_kW"
+    - "Last_Maintenance_Days_Ago"
+    - "Maintenance_History_Count"
+    - "Failure_History_Count"
+    - "AI_Supervision"
+    - "Error_Codes_Last_30_Days"
+    - "AI_Override_Events"
+  
+  # Caratteristiche aggiuntive per dispositivi specifici
+  additional_features:
+    - "Laser_Intensity"
+    - "Hydraulic_Pressure_bar"
+    - "Coolant_Flow_L_min"
+    - "Heat_Index"
+  
+  # Target variables
+  target_features:
+    - "Failure_Within_7_Days"
+    - "Remaining_Useful_Life_days"
+
+# Dispositivi con solo caratteristiche comuni
+devices_common_only:
+  - "3D_Printer"
+  - "AGV"
+  - "Automated_Screwdriver"
+  - "CMM"
+  - "Carton_Former"
+  - "Compressor"
+  - "Conveyor_Belt"
+  - "Crane"
+  - "Dryer"
+  - "Forklift_Electric"
+  - "Grinder"
+  - "Labeler"
+  - "Mixer"
+  - "Palletizer"
+  - "Pick_and_Place"
+  - "Press_Brake"
+  - "Pump"
+  - "Robot_Arm"
+  - "Shrink_Wrapper"
+  - "Shuttle_System"
+  - "Vacuum_Packer"
+  - "Valve_Controller"
+  - "Vision_System"
+  - "XRay_Inspector"
+
+# Dispositivi con caratteristiche aggiuntive
+devices_with_additional:
+  laser_devices:
+    - "Laser_Cutter"
+    additional_feature: "Laser_Intensity"
+  
+  hydraulic_devices:
+    - "Hydraulic_Press"
+    - "Injection_Molder"
+    additional_feature: "Hydraulic_Pressure_bar"
+  
+  coolant_devices:
+    - "CNC_Lathe"
+    - "CNC_Mill"
+    - "Industrial_Chiller"
+    additional_feature: "Coolant_Flow_L_min"
+  
+  heat_devices:
+    - "Boiler"
+    - "Furnace"
+    - "Heat_Exchanger"
+    additional_feature: "Heat_Index"
+
+# Web application
+web:
+  host: "0.0.0.0"
+  port: 5000
+  debug: True
+  static_folder: "web/static"
+  template_folder: "web/templates"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/app.log"
+
+# Evaluation metrics
+evaluation:
+  classification_metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1_score"
+    - "roc_auc"
+  
+  regression_metrics:
+    - "mse"
+    - "rmse"
+    - "mae"
+    - "r2_score"
