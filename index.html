@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Predictive Maintenance</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNDI4NUY0Ii8+Cjwvc3ZnPgo=">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4285f4, #34a853);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: calc(100vh - 80px);
+        }
+
+        .input-panel, .results-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+        }
+
+        .input-panel {
+            background: linear-gradient(135deg, #f8f9ff, #ffffff);
+        }
+
+        .results-panel {
+            background: linear-gradient(135deg, #ffffff, #f0f4ff);
+        }
+
+        .panel-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+            border-bottom: 3px solid #4285f4;
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-weight: 500;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+        }
+
+        .additional-fields {
+            background: #f8f9ff;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #4285f4;
+        }
+
+        .additional-fields h4 {
+            color: #4285f4;
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4285f4, #1a73e8);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #4285f4;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .prediction-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .failure-risk {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            height: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4285f4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+        }
+
+        .machine-info {
+            background: #e8f4fd;
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #0c5aa6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">IoT</div>
+        <h1>Sistema di Manutenzione Predittiva IoT Industriale</h1>
+    </div>
+
+    <div class="container">
+        <div class="input-panel">
+            <h2 class="panel-title">Inserimento Parametri Dispositivo</h2>
+            
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label for="machineType">Tipo di Dispositivo:</label>
+                    <select id="machineType" name="machineType" required>
+                        <option value="">Seleziona dispositivo...</option>
+                        <optgroup label="Dispositivi Base">
+                            <option value="3D_Printer">Stampante 3D</option>
+                            <option value="AGV">Veicolo Guidato Automaticamente</option>
+                            <option value="Automated_Screwdriver">Avvitatore Automatico</option>
+                            <option value="CMM">Macchina di Misura Coordinata</option>
+                            <option value="Carton_Former">Formatrice Cartoni</option>
+                            <option value="Compressor">Compressore</option>
+                            <option value="Conveyor_Belt">Nastro Trasportatore</option>
+                            <option value="Crane">Gru</option>
+                            <option value="Dryer">Essiccatore</option>
+                            <option value="Forklift_Electric">Carrello Elevatore Elettrico</option>
+                            <option value="Grinder">Smerigliatrice</option>
+                            <option value="Labeler">Etichettatrice</option>
+                            <option value="Mixer">Miscelatore</option>
+                            <option value="Palletizer">Palletizzatore</option>
+                            <option value="Pick_and_Place">Sistema Pick and Place</option>
+                            <option value="Press_Brake">Pressa Piegatrice</option>
+                            <option value="Pump">Pompa</option>
+                            <option value="Robot_Arm">Braccio Robotico</option>
+                            <option value="Shrink_Wrapper">Termoconfezionatrice</option>
+                            <option value="Shuttle_System">Sistema Shuttle</option>
+                            <option value="Vacuum_Packer">Confezionatrice Sottovuoto</option>
+                            <option value="Valve_Controller">Controller Valvole</option>
+                            <option value="Vision_System">Sistema di Visione</option>
+                            <option value="XRay_Inspector">Ispettore a Raggi X</option>
+                        </optgroup>
+                        <optgroup label="Dispositivi con Caratteristiche Speciali">
+                            <option value="Laser_Cutter">Tagliatrice Laser</option>
+                            <option value="Hydraulic_Press">Pressa Idraulica</option>
+                            <option value="Injection_Molder">Stampaggio a Iniezione</option>
+                            <option value="CNC_Lathe">Tornio CNC</option>
+                            <option value="CNC_Mill">Fresatrice CNC</option>
+                            <option value="Industrial_Chiller">Refrigeratore Industriale</option>
+                            <option value="Boiler">Caldaia</option>
+                            <option value="Furnace">Forno</option>
+                            <option value="Heat_Exchanger">Scambiatore di Calore</option>
+                        </optgroup>
+                    </select>
+                    <div class="machine-info" id="machineInfo" style="display: none;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="installationYear">Anno di Installazione:</label>
+                    <input type="number" id="installationYear" name="installationYear" min="2000" max="2025" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="operationalHours">Ore Operative:</label>
+                    <input type="number" id="operationalHours" name="operationalHours" min="0" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="temperature">Temperatura (°C):</label>
+                    <input type="number" id="temperature" name="temperature" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="vibration">Vibrazione (mm/s):</label>
+                    <input type="number" id="vibration" name="vibration" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sound">Suono (dB):</label>
+                    <input type="number" id="sound" name="sound" min="0" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="oilLevel">Livello Olio (%):</label>
+                    <input type="number" id="oilLevel" name="oilLevel" min="0" max="100" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="coolantLevel">Livello Liquido Raffreddamento (%):</label>
+                    <input type="number" id="coolantLevel" name="coolantLevel" min="0" max="100" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="powerConsumption">Consumo Energetico (kW):</label>
+                    <input type="number" id="powerConsumption" name="powerConsumption" min="0" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="lastMaintenance">Giorni dall'Ultima Manutenzione:</label>
+                    <input type="number" id="lastMaintenance" name="lastMaintenance" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="maintenanceCount">Numero di Manutenzioni:</label>
+                    <input type="number" id="maintenanceCount" name="maintenanceCount" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="failureCount">Numero di Guasti:</label>
+                    <input type="number" id="failureCount" name="failureCount" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="aiSupervision">Supervisione AI:</label>
+                    <select id="aiSupervision" name="aiSupervision" required>
+                        <option value="">Seleziona...</option>
+                        <option value="1">Attiva</option>
+                        <option value="0">Non Attiva</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="errorCodes">Errori negli Ultimi 30 Giorni:</label>
+                    <input type="number" id="errorCodes" name="errorCodes" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="aiOverrides">Allarmi AI Ignorati:</label>
+                    <input type="number" id="aiOverrides" name="aiOverrides" min="0" required>
+                </div>
+
+                <div id="additionalFields" class="additional-fields" style="display: none;">
+                    <h4>Caratteristiche Aggiuntive</h4>
+                    
+                    <div class="form-group" id="laserIntensityGroup" style="display: none;">
+                        <label for="laserIntensity">Intensità Laser:</label>
+                        <input type="number" id="laserIntensity" name="laserIntensity" min="0" step="0.1">
+                    </div>
+
+                    <div class="form-group" id="hydraulicPressureGroup" style="display: none;">
+                        <label for="hydraulicPressure">Pressione Idraulica (bar):</label>
+                        <input type="number" id="hydraulicPressure" name="hydraulicPressure" min="0" step="0.1">
+                    </div>
+
+                    <div class="form-group" id="coolantFlowGroup" style="display: none;">
+                        <label for="coolantFlow">Portata Refrigerante (L/min):</label>
+                        <input type="number" id="coolantFlow" name="coolantFlow" min="0" step="0.1">
+                    </div>
+
+                    <div class="form-group" id="heatIndexGroup" style="display: none;">
+                        <label for="heatIndex">Indice di Calore:</label>
+                        <input type="number" id="heatIndex" name="heatIndex" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="predictBtn">
+                    Esegui Previsione
+                </button>
+            </form>
+        </div>
+
+        <div class="results-panel">
+            <h2 class="panel-title">Risultati Previsione</h2>
+            
+            <div id="welcomeMessage">
+                <div class="result-card">
+                    <h3 class="result-title">Benvenuto nel Sistema di Manutenzione Predittiva</h3>
+                    <p class="prediction-text">
+                        Inserisci i parametri del dispositivo IoT nella sezione a sinistra per ottenere una previsione accurata sui rischi di guasto e raccomandazioni per la manutenzione.
+                    </p>
+                    <p class="prediction-text">
+                        Il sistema analizza oltre 20 parametri diversi per fornire previsioni affidabili sulla salute dei tuoi dispositivi industriali.
+                    </p>
+                </div>
+            </div>
+
+            <div id="loadingMessage" class="loading">
+                <div class="spinner"></div>
+                <p>Elaborazione previsione in corso...</p>
+            </div>
+
+            <div id="resultsContainer" style="display: none;">
+                <div id="predictionResult" class="result-card">
+                    <h3 class="result-title">Risultato Previsione</h3>
+                    <div id="predictionText" class="prediction-text"></div>
+                    <div id="riskLevel"></div>
+                </div>
+
+                <div id="chartContainer" class="chart-container">
+                    <canvas id="riskChart"></canvas>
+                </div>
+
+                <div id="recommendationsCard" class="result-card">
+                    <h3 class="result-title">Raccomandazioni</h3>
+                    <div id="recommendationsText" class="prediction-text"></div>
+                </div>
+            </div>
+
+            <div id="errorContainer" style="display: none;">
+                <div class="error-message">
+                    <strong>Errore durante la previsione:</strong>
+                    <div id="errorText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        // Configurazione dispositivi e campi aggiuntivi
+        const deviceConfig = {
+            'Laser_Cutter': {
+                additionalField: 'laser',
+                description: 'Dispositivo per taglio laser che richiede monitoraggio dell\'intensità laser'
+            },
+            'Hydraulic_Press': {
+                additionalField: 'hydraulic',
+                description: 'Pressa idraulica che richiede monitoraggio della pressione idraulica'
+            },
+            'Injection_Molder': {
+                additionalField: 'hydraulic',
+                description: 'Macchina per stampaggio a iniezione con controllo pressione idraulica'
+            },
+            'CNC_Lathe': {
+                additionalField: 'coolant',
+                description: 'Tornio CNC con sistema di raffreddamento monitorato'
+            },
+            'CNC_Mill': {
+                additionalField: 'coolant',
+                description: 'Fresatrice CNC con controllo portata refrigerante'
+            },
+            'Industrial_Chiller': {
+                additionalField: 'coolant',
+                description: 'Sistema di raffreddamento industriale'
+            },
+            'Boiler': {
+                additionalField: 'heat',
+                description: 'Caldaia industriale con monitoraggio indice di calore'
+            },
+            'Furnace': {
+                additionalField: 'heat',
+                description: 'Forno industriale ad alta temperatura'
+            },
+            'Heat_Exchanger': {
+                additionalField: 'heat',
+                description: 'Scambiatore di calore con controllo termico'
+            }
+        };
+
+        // Gestione selezione tipo dispositivo
+        document.getElementById('machineType').addEventListener('change', function() {
+            const selectedType = this.value;
+            const additionalFields = document.getElementById('additionalFields');
+            const machineInfo = document.getElementById('machineInfo');
+            
+            // Nascondi tutti i campi aggiuntivi
+            document.getElementById('laserIntensityGroup').style.display = 'none';
+            document.getElementById('hydraulicPressureGroup').style.display = 'none';
+            document.getElementById('coolantFlowGroup').style.display = 'none';
+            document.getElementById('heatIndexGroup').style.display = 'none';
+            
+            // Reset valori campi aggiuntivi
+            document.getElementById('laserIntensity').value = '';
+            document.getElementById('hydraulicPressure').value = '';
+            document.getElementById('coolantFlow').value = '';
+            document.getElementById('heatIndex').value = '';
+            
+            if (selectedType && deviceConfig[selectedType]) {
+                const config = deviceConfig[selectedType];
+                additionalFields.style.display = 'block';
+                machineInfo.style.display = 'block';
+                machineInfo.textContent = config.description;
+                
+                // Mostra il campo specifico
+                switch(config.additionalField) {
+                    case 'laser':
+                        document.getElementById('laserIntensityGroup').style.display = 'block';
+                        document.getElementById('laserIntensity').required = true;
+                        break;
+                    case 'hydraulic':
+                        document.getElementById('hydraulicPressureGroup').style.display = 'block';
+                        document.getElementById('hydraulicPressure').required = true;
+                        break;
+                    case 'coolant':
+                        document.getElementById('coolantFlowGroup').style.display = 'block';
+                        document.getElementById('coolantFlow').required = true;
+                        break;
+                    case 'heat':
+                        document.getElementById('heatIndexGroup').style.display = 'block';
+                        document.getElementById('heatIndex').required = true;
+                        break;
+                }
+            } else {
+                additionalFields.style.display = 'none';
+                machineInfo.style.display = 'none';
+                // Rimuovi required dai campi aggiuntivi
+                document.getElementById('laserIntensity').required = false;
+                document.getElementById('hydraulicPressure').required = false;
+                document.getElementById('coolantFlow').required = false;
+                document.getElementById('heatIndex').required = false;
+            }
+        });
+
+        // Gestione form submission
+        document.getElementById('predictionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Mostra loading
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('loadingMessage').style.display = 'block';
+            
+            // Simula chiamata API (da sostituire con vera chiamata al backend)
+            setTimeout(() => {
+                makePrediction();
+            }, 2000);
+        });
+
+        function makePrediction() {
+            try {
+                // Raccolta dati dal form
+                const formData = new FormData(document.getElementById('predictionForm'));
+                const data = Object.fromEntries(formData.entries());
+                
+                // Simula una previsione (da sostituire con vera API call)
+                const mockPrediction = generateMockPrediction(data);
+                
+                displayResults(mockPrediction);
+                
+            } catch (error) {
+                displayError('Errore durante l\'elaborazione dei dati. Verifica i parametri inseriti.');
+            }
+        }
+
+        function generateMockPrediction(data) {
+            // Logica semplificata per simulare una previsione
+            const riskFactors = [];
+            let riskScore = 0;
+            
+            // Analisi parametri critici
+            if (parseInt(data.lastMaintenance) > 30) {
+                riskFactors.push('Manutenzione non recente');
+                riskScore += 25;
+            }
+            
+            if (parseInt(data.failureCount) > 2) {
+                riskFactors.push('Storico guasti elevato');
+                riskScore += 20;
+            }
+            
+            if (parseFloat(data.vibration) > 10) {
+                riskFactors.push('Vibrazioni eccessive');
+                riskScore += 30;
+            }
+            
+            if (parseFloat(data.oilLevel) < 20) {
+                riskFactors.push('Livello olio basso');
+                riskScore += 15;
+            }
+            
+            if (parseInt(data.errorCodes) > 5) {
+                riskFactors.push('Errori frequenti');
+                riskScore += 20;
+            }
+
+            // Calcola giorni rimanenti
+            const remainingDays = Math.max(1, 90 - riskScore);
+            const failureWithin7Days = riskScore > 70;
+            
+            return {
+                riskScore: Math.min(riskScore, 95),
+                riskFactors: riskFactors.length > 0 ? riskFactors : ['Parametri nella norma'],
+                remainingDays,
+                failureWithin7Days,
+                machineType: data.machineType
+            };
+        }
+
+        function displayResults(prediction) {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'block';
+            
+            // Testo predizione
+            const predictionText = document.getElementById('predictionText');
+            const mainRisk = prediction.riskFactors[0];
+            
+            if (prediction.failureWithin7Days) {
+                predictionText.innerHTML = `
+                    <strong>${prediction.riskScore}% di probabilità di guasto</strong> per ${mainRisk.toLowerCase()}.<br>
+                    <strong>⚠️ Guasto entro 7 giorni</strong><br>
+                    Azione consigliata: <strong>Intervento immediato richiesto</strong>
+                `;
+            } else {
+                predictionText.innerHTML = `
+                    <strong>${prediction.riskScore}% di probabilità di guasto</strong> per ${mainRisk.toLowerCase()}.<br>
+                    Azione consigliata: <strong>Pianificare manutenzione preventiva</strong><br>
+                    Giorni di vita rimanenti stimati: <strong>~${prediction.remainingDays} giorni</strong>
+                `;
+            }
+            
+            // Livello di rischio
+            const riskLevel = document.getElementById('riskLevel');
+            let riskClass, riskText;
+            
+            if (prediction.riskScore >= 70) {
+                riskClass = 'risk-high';
+                riskText = 'RISCHIO ALTO';
+            } else if (prediction.riskScore >= 40) {
+                riskClass = 'risk-medium';
+                riskText = 'RISCHIO MEDIO';
+            } else {
+                riskClass = 'risk-low';
+                riskText = 'RISCHIO BASSO';
+            }
+            
+            riskLevel.innerHTML = `<span class="failure-risk ${riskClass}">${riskText}</span>`;
+            
+            // Raccomandazioni
+            const recommendations = generateRecommendations(prediction);
+            document.getElementById('recommendationsText').innerHTML = recommendations;
+            
+            // Grafico
+            createRiskChart(prediction);
+        }
+
+        function generateRecommendations(prediction) {
+            let recommendations = '<ul style="padding-left: 1.5rem;">';
+            
+            prediction.riskFactors.forEach(factor => {
+                switch(factor) {
+                    case 'Manutenzione non recente':
+                        recommendations += '<li>Programmare manutenzione ordinaria entro 7 giorni</li>';
+                        break;
+                    case 'Storico guasti elevato':
+                        recommendations += '<li>Analisi approfondita delle cause ricorrenti di guasto</li>';
+                        break;
+                    case 'Vibrazioni eccessive':
+                        recommendations += '<li>Controllo bilanciamento e allineamento componenti</li>';
+                        
