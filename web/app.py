@@ -3,37 +3,28 @@ Flask Web Application for IoT Predictive Maintenance System
 Provides web interface for device failure prediction
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import sys
+from pathlib import Path
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 import json
 from datetime import datetime
 import logging
 
-# Add src directory to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Aggiungere il percorso src per gli import
+sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
 try:
-    from prediction_engine import PredictionEngine
-    from utils_complete import (
-        validate_input_data, 
-        get_device_info, 
-        DEVICE_CONFIG, 
-        COMMON_DEVICES,
-        log_prediction,
-        get_system_health_status,
-        prepare_input_for_prediction,
-        generate_risk_assessment,
-        format_prediction_output,
-        calculate_maintenance_schedule,
-        convert_to_display_format
-    )
+    from src.prediction_engine import PredictionEngine
+    from src.utils import load_config
 except ImportError as e:
     print(f"Import error: {e}")
     # Fallback imports or dummy functions can be added here
 
-app = Flask(__name__)
+app = Flask(__name__, 
+           template_folder='web/templates',
+           static_folder='web/static')
 app.secret_key = 'your-secret-key-change-in-production'
 
 # Configure logging
