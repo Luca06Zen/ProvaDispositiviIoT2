@@ -14,7 +14,7 @@ import warnings
 from pathlib import Path
 
 # Aggiunge il percorso del progetto per gli import
-project_root = Path(__file__).parent.parent  # va su di un livello perché il test è in tests/
+project_root = Path(__file__).parent.parent # Da tests/ va alla root del progetto
 sys.path.append(str(project_root))
 sys.path.append(str(project_root / 'src'))
 
@@ -40,23 +40,26 @@ class TestModelloPredizioneGuasti(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Configura i fixture di test prima di tutti i test"""
-        # Percorsi possibili per i file del modello secondo la struttura del progetto
+        # Percorsi corretti secondo la struttura proposta
+        project_root = Path(__file__).parent.parent
+        models_dir = project_root / 'data' / 'models'
+        
         percorsi_modello_possibili = [
+            models_dir / 'failure_prediction_model.pkl',
+            'data/models/failure_prediction_model.pkl',
             Path('data') / 'models' / 'failure_prediction_model.pkl',
-            Path('..') / 'data' / 'models' / 'failure_prediction_model.pkl',  # se il test è in tests/
-            'data/models/failure_prediction_model.pkl'
         ]
         
         percorsi_scaler_possibili = [
-            'scaler.pkl',
+            models_dir / 'scaler.pkl',
             'data/models/scaler.pkl',
-            Path('data') / 'models' / 'scaler.pkl'
+            Path('data') / 'models' / 'scaler.pkl',
         ]
-        
+    
         percorsi_encoder_possibili = [
-            'label_encoder.pkl',
+            models_dir / 'label_encoder.pkl',
             'data/models/label_encoder.pkl',
-            Path('data') / 'models' / 'label_encoder.pkl'
+            Path('data') / 'models' / 'label_encoder.pkl',
         ]
         
         cls.percorso_modello = None
