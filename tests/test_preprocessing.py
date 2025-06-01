@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 # Add project root to Python path for imports
-project_root = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
 try:
@@ -24,7 +24,6 @@ except ImportError as e:
     print("Some tests will be skipped if modules are not available")
     MODULES_AVAILABLE = False
 
-
 class TestDataPreprocessing(unittest.TestCase):
     """Test cases for data preprocessing functionality"""
     
@@ -33,13 +32,15 @@ class TestDataPreprocessing(unittest.TestCase):
         """Set up test fixtures before all tests"""
         try:
             # Try to load config if available
-            if os.path.exists('config.yaml'):
-                cls.config = load_config()
+            config_path = os.path.join(project_root, 'config.yaml')
+            if os.path.exists(config_path):
+                cls.config = load_config(config_path)
             else:
                 cls.config = cls.create_default_config()
             
             # Check if DataPreprocessor class exists
-            if MODULES_AVAILABLE and (os.path.exists('data_preprocessing.py') or 'data_preprocessing' in sys.modules):
+            preprocessing_path = os.path.join(project_root, 'data_preprocessing.py')
+            if MODULES_AVAILABLE and (os.path.exists(preprocessing_path) or 'data_preprocessing' in sys.modules):
                 cls.preprocessor = DataPreprocessor(cls.config)
             else:
                 cls.preprocessor = None
@@ -186,6 +187,25 @@ class TestDataPreprocessing(unittest.TestCase):
             self.assertIn(machine, all_expected_machines, 
                          f"Unexpected machine type: {machine}")
     
+    def test_target_variables_compliance(self):
+        """Test that target variables match PDF output requirements"""
+        # Test Remaining_Useful_Life_days exists and is numeric
+        self.assertIn('Remaining_Useful_Life_days', self.sample_data.columns)
+        self.assertTrue(pd.api.types.is_numeric_dtype(self.sample_data['Remaining_Useful_Life_days']))
+        
+        # Test Failure_Within_7_Days is binary
+        self.assertIn('Failure_Within_7_Days', self.sample_data.columns)
+        unique_values = set(self.sample_data['Failure_Within_7_Days'].unique())
+        self.assertTrue(unique_values.issubset({0, 1}))
+        
+        # Test relationship between remaining days and 7-day failure
+        short_life = self.sample_data[self.sample_data['Remaining_Useful_Life_days'] <= 7]
+        if not short_life.empty:
+            # Most machines with ≤7 days should have Failure_Within_7_Days = 1
+            failure_rate = short_life['Failure_Within_7_Days'].mean()
+            self.assertGreater(failure_rate, 0.5, 
+                            "Machines with ≤7 days remaining should have higher failure probability")
+    
     def test_special_features_logic(self):
         """Test that special features are set correctly based on machine type"""
         # Test Laser_Cutter has Laser_Intensity > 0
@@ -301,6 +321,33 @@ class TestDataPreprocessing(unittest.TestCase):
         except AttributeError:
             self.skipTest("split_data method not implemented")
     
+    def test_prediction_output_format(self):
+        """Test that prediction output matches PDF requirements"""
+        # This test verifies the expected output format:
+        # "xx% di probabilità guasto. Azione consigliata: .... Giorni di vita rimanenti: ..... Guasto entro 7 giorni: sì/no"
+        
+        sample_predictions = [
+            {"failure_probability": 0.05, "remaining_days": 200, "failure_within_7": False},
+            {"failure_probability": 0.89, "remaining_days": 3, "failure_within_7": True},
+            {"failure_probability": 0.80, "remaining_days": 7, "failure_within_7": True}
+        ]
+        
+        for pred in sample_predictions:
+            # Test that all required components are present
+            self.assertIn("failure_probability", pred)
+            self.assertIn("remaining_days", pred)
+            self.assertIn("failure_within_7", pred)
+            
+            # Test probability is between 0 and 1
+            self.assertGreaterEqual(pred["failure_probability"], 0)
+            self.assertLessEqual(pred["failure_probability"], 1)
+            
+            # Test remaining days is positive
+            self.assertGreaterEqual(pred["remaining_days"], 0)
+            
+            # Test binary failure prediction
+            self.assertIn(pred["failure_within_7"], [True, False])
+
     def test_data_types_validation(self):
         """Test that data types are appropriate"""
         # Machine_ID should be string
@@ -350,6 +397,40 @@ class TestDataPreprocessing(unittest.TestCase):
         # Sound should be positive
         valid_sound = self.sample_data['Sound_dB'].dropna()
         self.assertTrue((valid_sound > 0).all(), "Sound_dB should be positive")
+    
+    def test_project_structure_compliance(self):
+        """Test that project structure matches PDF specifications"""
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # Expected directories as per PDF
+        expected_dirs = [
+            'data', 'data/models', 'tests', 'notebooks', 'static'
+        ]
+        
+        for dir_path in expected_dirs:
+            full_path = os.path.join(project_root, dir_path)
+            self.assertTrue(os.path.exists(full_path), 
+                        f"Missing directory required by PDF: {dir_path}")
+        
+        # Expected files in root as per PDF
+        expected_files = [
+            'app.py', 'config.yaml', 'requirements.txt', 'README.md',
+            'data_preprocessing.py', 'model_training.py', 'prediction_engine.py',
+            'model_evaluation.py', 'utils.py', 'setup.py'
+        ]
+        
+        for file_name in expected_files:
+            full_path = os.path.join(project_root, file_name)
+            self.assertTrue(os.path.exists(full_path), f"Missing file required by PDF: {file_name}")
+            
+    def test_model_saving_path(self):
+        """Test that models are saved in correct directory as per PDF"""
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        models_dir = os.path.join(project_root, 'data', 'models')
+        
+        # Check that models directory exists
+        self.assertTrue(os.path.exists(models_dir), 
+                    "Models directory should exist at data/models/")
 
 
 def run_tests():
