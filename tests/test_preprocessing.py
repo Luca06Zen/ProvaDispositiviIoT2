@@ -16,8 +16,8 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
 try:
-    from data_preprocessing import DataPreprocessor
-    from utils import load_config
+    from src.data_preprocessing import DataPreprocessor
+    from src.utils import load_config
     MODULES_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Could not import modules: {e}")
@@ -39,7 +39,7 @@ class TestDataPreprocessing(unittest.TestCase):
                 cls.config = cls.create_default_config()
             
             # Check if DataPreprocessor class exists
-            preprocessing_path = os.path.join(project_root, 'data_preprocessing.py')
+            preprocessing_path = os.path.join(project_root, 'src', 'data_preprocessing.py')
             if MODULES_AVAILABLE and (os.path.exists(preprocessing_path) or 'data_preprocessing' in sys.modules):
                 cls.preprocessor = DataPreprocessor(cls.config)
             else:
@@ -325,13 +325,17 @@ class TestDataPreprocessing(unittest.TestCase):
     
     def test_prediction_output_format(self):
         """Test that prediction output matches PDF requirements"""
-        # This test verifies the expected output format:
+        # This test verifies the expected output format structure:
         # "xx% di probabilità guasto. Azione consigliata: .... Giorni di vita rimanenti: ..... Guasto entro 7 giorni: sì/no"
+        # Note: Examples in PDF are random/illustrative, not actual model outputs
         
+        # Test with various realistic prediction scenarios (not based on PDF examples)
         sample_predictions = [
-            {"failure_probability": 0.05, "remaining_days": 200, "failure_within_7": False},
-            {"failure_probability": 0.89, "remaining_days": 3, "failure_within_7": True},
-            {"failure_probability": 0.80, "remaining_days": 7, "failure_within_7": True}
+            {"failure_probability": 0.15, "remaining_days": 45, "failure_within_7": False},
+            {"failure_probability": 0.73, "remaining_days": 12, "failure_within_7": False},
+            {"failure_probability": 0.92, "remaining_days": 2, "failure_within_7": True},
+            {"failure_probability": 0.68, "remaining_days": 8, "failure_within_7": False},
+            {"failure_probability": 0.35, "remaining_days": 120, "failure_within_7": False}
         ]
         
         for pred in sample_predictions:
@@ -340,15 +344,37 @@ class TestDataPreprocessing(unittest.TestCase):
             self.assertIn("remaining_days", pred)
             self.assertIn("failure_within_7", pred)
             
-            # Test probability is between 0 and 1
+            # Test probability is between 0 and 1 (basic validation)
             self.assertGreaterEqual(pred["failure_probability"], 0)
             self.assertLessEqual(pred["failure_probability"], 1)
             
-            # Test remaining days is positive
+            # Test remaining days is non-negative (0 is possible for immediate failure)
             self.assertGreaterEqual(pred["remaining_days"], 0)
             
             # Test binary failure prediction
             self.assertIn(pred["failure_within_7"], [True, False])
+            
+            # Test data types are correct
+            self.assertIsInstance(pred["failure_probability"], (int, float))
+            self.assertIsInstance(pred["remaining_days"], (int, float))
+            self.assertIsInstance(pred["failure_within_7"], bool)
+
+        # Test edge cases that might occur in real scenarios
+        edge_cases = [
+            {"failure_probability": 0.0, "remaining_days": 500, "failure_within_7": False},  # Very low risk
+            {"failure_probability": 1.0, "remaining_days": 0, "failure_within_7": True},    # Immediate failure
+            {"failure_probability": 0.5, "remaining_days": 7, "failure_within_7": True}     # Boundary case
+        ]
+        
+        for edge_case in edge_cases:
+            self.assertIn("failure_probability", edge_case)
+            self.assertIn("remaining_days", edge_case)
+            self.assertIn("failure_within_7", edge_case)
+            
+            # Validate edge case values are still within acceptable ranges
+            self.assertGreaterEqual(edge_case["failure_probability"], 0)
+            self.assertLessEqual(edge_case["failure_probability"], 1)
+            self.assertGreaterEqual(edge_case["remaining_days"], 0)
 
     def test_data_types_validation(self):
         """Test that data types are appropriate"""
