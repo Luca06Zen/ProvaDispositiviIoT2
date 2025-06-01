@@ -287,6 +287,14 @@ class TestModelloPredizioneGuasti(unittest.TestCase):
                              f"recommended_action dovrebbe essere string per {tipo_macchina}")
         self.assertGreater(len(risultato['recommended_action']), 0, 
                           f"recommended_action non dovrebbe essere vuoto per {tipo_macchina}")
+        
+        # Verifica che l'azione consigliata contenga parole chiave significative
+        # Verifica che l'azione consigliata contenga parole chiave significative
+        parole_chiave_azioni = ['manutenzione', 'controllo', 'sostituzione', 'ispezione', 'riparazione', 'nessuna']
+        azione_lower = risultato['recommended_action'].lower()
+        ha_parola_chiave = any(parola in azione_lower for parola in parole_chiave_azioni)
+        self.assertTrue(ha_parola_chiave, 
+                    f"recommended_action dovrebbe contenere un'azione specifica per {tipo_macchina}")
     
     def test_conformita_formato_output(self):
         """Testa che il formato di output corrisponda alle specifiche del PDF"""
@@ -329,17 +337,44 @@ class TestModelloPredizioneGuasti(unittest.TestCase):
             probabilita_pct = risultato['failure_probability'] * 100
             self.assertIsInstance(probabilita_pct, (int, float))
             
-            # Testa che possiamo creare il formato di output richiesto
-            if 'remaining_useful_life' in risultato:
-                formato_output = f"{probabilita_pct:.1f}% di probabilità guasto. Azione consigliata: {risultato['recommended_action']}. Giorni di vita rimanenti: {risultato.get('remaining_useful_life', 'N/A')}"
-            else:
-                formato_output = f"Guasto entro 7 giorni: {'true' if risultato['failure_within_7_days'] else 'false'}"
+            # Format sempre completo: "xx% di probabilità guasto. Azione consigliata: .... Giorni di vita rimanenti: .... Guasto entro 7 giorni: sì/no"
+            giorni_rimanenti =  risultato.get('remaining_useful_life', 
+                                    risultato.get('Remaining_Useful_Life_days',
+                                        risultato.get('giorni_rimanenti', 'N/A')))
+            guasto_7_giorni = "sì" if risultato['failure_within_7_days'] else "no"
             
+            formato_output = f"{probabilita_pct:.0f}% di probabilità guasto. Azione consigliata: {risultato['recommended_action']}. Giorni di vita rimanenti: {giorni_rimanenti}. Guasto entro 7 giorni: {guasto_7_giorni}"
+
             self.assertIsInstance(formato_output, str)
-            self.assertGreater(len(formato_output), 10, "Il formato di output dovrebbe essere significativo")
+            self.assertGreater(len(formato_output), 50, "Il formato di output dovrebbe essere completo e significativo")
             
+            # Verifica che il formato contenga tutti i componenti richiesti
+            self.assertIn("% di probabilità guasto", formato_output)
+            self.assertIn("Azione consigliata:", formato_output) 
+            self.assertIn("Giorni di vita rimanenti:", formato_output)
+            self.assertIn("Guasto entro 7 giorni:", formato_output)
+            self.assertIn(guasto_7_giorni, formato_output)
+
         except Exception as e:
             self.fail(f"Test formato output fallito: {e}")
+    
+    def test_gestione_quattro_colonne_speciali(self):
+        """Testa la gestione corretta delle 4 colonne speciali come richiesto dal PDF"""
+        if not self.modello_esiste or not MODULI_DISPONIBILI or self.motore_predizione is None:
+            self.skipTest("File del modello o motore di predizione non disponibili.")
+        
+        # Test che le 4 colonne speciali siano correttamente gestite
+        colonne_speciali = ['Laser_Intensity', 'Hydraulic_Pressure_bar', 'Coolant_Flow_L_min', 'Heat_Index']
+        
+        for colonna in colonne_speciali:
+            dati_input = self.crea_dati_input_base()
+            dati_input[colonna] = 100.0  # Valore significativo
+            
+            try:
+                risultato = self.motore_predizione.predict(dati_input)
+                self.assertIsNotNone(risultato, f"Il risultato non dovrebbe essere None per {colonna}")
+            except Exception as e:
+                self.fail(f"Errore nella gestione della colonna speciale {colonna}: {e}")
     
     def test_consistenza_modello(self):
         """Testa che il modello dia risultati consistenti per input identici"""
@@ -546,6 +581,31 @@ class TestModelloPredizioneGuasti(unittest.TestCase):
                 except Exception as e:
                     self.fail(f"Test input realistico fallito per {caso_test['nome']}: {e}")
     
+    def crea_dati_input_base(self):
+        """Crea dati di input base per i test"""
+        return {
+            'Machine_Type': 'Conveyor_Belt',
+            'Installation_Year': 2020,
+            'Operational_Hours': 15000,
+            'Temperature_C': 45.0,
+            'Vibration_mms': 3.5,
+            'Sound_dB': 65.0,
+            'Oil_Level_pct': 85.0,
+            'Coolant_Level_pct': 78.0,
+            'Power_Consumption_kW': 25.0,
+            'Last_Maintenance_Days_Ago': 45,
+            'Maintenance_History_Count': 12,
+            'Failure_History_Count': 2,
+            'AI_Supervision': 1,
+            'Error_Codes_Last_30_Days': 3,
+            'AI_Override_Events': 1,
+            'Remaining_Useful_Life_days': 180,
+            'Laser_Intensity': 0.0,
+            'Hydraulic_Pressure_bar': 0.0,
+            'Coolant_Flow_L_min': 0.0,
+            'Heat_Index': 0.0
+        }
+    
     def crea_input_esempio(self):
         """Crea un input di esempio per i test con nomi di colonna corretti dal PDF"""
         dati_esempio = {
@@ -611,7 +671,7 @@ class TestIntegritaDati(unittest.TestCase):
     
     def test_mappatura_caratteristiche_speciali(self):
         """Testa che la mappatura delle caratteristiche speciali sia corretta"""
-        # Mappatura secondo il PDF
+        # Mappatura attesa
         mappatura_attesa = {
             'Laser_Cutter': 'Laser_Intensity',
             'Hydraulic_Press': 'Hydraulic_Pressure_bar',
@@ -623,13 +683,31 @@ class TestIntegritaDati(unittest.TestCase):
             'Furnace': 'Heat_Index',
             'Heat_Exchanger': 'Heat_Index'
         }
-        
+
+        quattro_colonne_speciali = ['Laser_Intensity', 'Hydraulic_Pressure_bar', 'Coolant_Flow_L_min', 'Heat_Index']
+
         # Verifica che ogni tipo di macchina speciale abbia la caratteristica corretta
         for tipo_macchina, caratteristica_attesa in mappatura_attesa.items():
-            self.assertIn(caratteristica_attesa, [
-                'Laser_Intensity', 'Hydraulic_Pressure_bar', 
-                'Coolant_Flow_L_min', 'Heat_Index'
-            ], f"Caratteristica {caratteristica_attesa} dovrebbe essere una delle 4 speciali")
+            self.assertIn(caratteristica_attesa, quattro_colonne_speciali,
+                        f"Caratteristica {caratteristica_attesa} per {tipo_macchina} dovrebbe essere una delle 4 speciali")
+        
+        # Verifica che ogni colonna speciale sia usata
+        caratteristiche_usate = set(mappatura_attesa.values())
+        self.assertEqual(caratteristiche_usate, set(quattro_colonne_speciali),
+                        "Tutte e 4 le caratteristiche speciali dovrebbero essere usate")
+        
+        # Verifica gruppi di macchine con stessa caratteristica
+        gruppi_attesi = {
+            'Hydraulic_Pressure_bar': ['Hydraulic_Press', 'Injection_Molder'],
+            'Coolant_Flow_L_min': ['CNC_Lathe', 'CNC_Mill', 'Industrial_Chiller'],
+            'Heat_Index': ['Boiler', 'Furnace', 'Heat_Exchanger'],
+            'Laser_Intensity': ['Laser_Cutter']
+        }
+    
+        for caratteristica, macchine_attese in gruppi_attesi.items():
+            macchine_trovate = [m for m, c in mappatura_attesa.items() if c == caratteristica]
+            self.assertEqual(set(macchine_trovate), set(macchine_attese),
+                            f"Macchine per {caratteristica} non corrispondono a quelle specificate nel README.md")
         
     def test_lista_completa_macchine_base(self):
         """Verifica che la lista completa delle macchine base sia corretta"""
