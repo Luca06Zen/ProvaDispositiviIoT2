@@ -422,4 +422,81 @@ def convert_to_display_format(data):
         'Machine_Type': 'Tipo di Dispositivo',
         'Installation_Year': 'Anno di Installazione',
         'Operational_Hours': 'Ore Operative',
-        'Temperature
+        'Temperature_C': 'Temperatura (°C)',
+        'Vibration_mms': 'Vibrazione (mm/s)',
+        'Sound_dB': 'Suono (dB)',
+        'Oil_Level_pct': 'Livello Olio (%)',
+        'Coolant_Level_pct': 'Livello Refrigerante (%)',
+        'Power_Consumption_kW': 'Consumo Energetico (kW)',
+        'Last_Maintenance_Days_Ago': 'Giorni dall\'ultima Manutenzione',
+        'Maintenance_History_Count': 'Numero Manutenzioni',
+        'Failure_History_Count': 'Numero Guasti',
+        'AI_Supervision': 'Supervisione AI',
+        'Error_Codes_Last_30_Days': 'Errori ultimi 30 giorni',
+        'AI_Override_Events': 'Allarmi AI Ignorati',
+        'Laser_Intensity': 'Intensità Laser',
+        'Hydraulic_Pressure_bar': 'Pressione Idraulica (bar)',
+        'Coolant_Flow_L_min': 'Flusso Refrigerante (L/min)',
+        'Heat_Index': 'Indice di Calore'
+    }
+    
+    for key, value in data.items():
+        display_key = field_mappings.get(key, key)
+        if isinstance(value, (int, float)):
+            display_data[display_key] = format_number(value)
+        else:
+            display_data[display_key] = str(value)
+    
+    return display_data
+
+def validate_machine_type(machine_type):
+    """Validate if machine type is supported"""
+    all_devices = COMMON_DEVICES + list(DEVICE_CONFIG.keys())
+    return machine_type in all_devices
+
+def get_required_fields(machine_type):
+    """Get required fields for a specific machine type"""
+    required_fields = [
+        'Installation_Year', 'Operational_Hours', 'Temperature_C', 'Vibration_mms',
+        'Sound_dB', 'Oil_Level_pct', 'Coolant_Level_pct', 'Power_Consumption_kW',
+        'Last_Maintenance_Days_Ago', 'Maintenance_History_Count', 'Failure_History_Count',
+        'AI_Supervision', 'Error_Codes_Last_30_Days', 'AI_Override_Events'
+    ]
+    
+    if machine_type in DEVICE_CONFIG:
+        additional_field = DEVICE_CONFIG[machine_type]['additional_field']
+        required_fields.append(additional_field)
+    
+    return required_fields
+
+def create_sample_data(machine_type):
+    """Create sample data for testing"""
+    sample_data = {
+        'Installation_Year': 2020,
+        'Operational_Hours': 5000,
+        'Temperature_C': 45,
+        'Vibration_mms': 2.5,
+        'Sound_dB': 65,
+        'Oil_Level_pct': 75,
+        'Coolant_Level_pct': 80,
+        'Power_Consumption_kW': 15,
+        'Last_Maintenance_Days_Ago': 25,
+        'Maintenance_History_Count': 3,
+        'Failure_History_Count': 1,
+        'AI_Supervision': 1,
+        'Error_Codes_Last_30_Days': 2,
+        'AI_Override_Events': 0
+    }
+    
+    if machine_type in DEVICE_CONFIG:
+        additional_field = DEVICE_CONFIG[machine_type]['additional_field']
+        if additional_field == 'Laser_Intensity':
+            sample_data['Laser_Intensity'] = 75
+        elif additional_field == 'Hydraulic_Pressure_bar':
+            sample_data['Hydraulic_Pressure_bar'] = 250
+        elif additional_field == 'Coolant_Flow_L_min':
+            sample_data['Coolant_Flow_L_min'] = 25
+        elif additional_field == 'Heat_Index':
+            sample_data['Heat_Index'] = 60
+    
+    return sample_data

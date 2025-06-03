@@ -208,6 +208,10 @@ class PredictionEngine:
                 'risk_level': self._get_risk_level(failure_probability),
                 'input_summary': self._summarize_input(input_data)
             }
+
+            # Generate formatted output string as required
+            formatted_output = self._format_output_string(results)
+            results['formatted_output'] = formatted_output
             
             return results
             
@@ -310,6 +314,34 @@ class PredictionEngine:
                 results.append({'error': str(e)})
         
         return results
+    
+    def _format_output_string(self, results: Dict[str, Any]) -> str:
+        """Format output string as required: 'xx% probabilità guasto. Azione consigliata: .... Giorni di vita rimanenti: ..... Guasto entro 7 giorni: sì/no'"""
+        
+        # Determine recommended action based on probability and risk level
+        probability = results['failure_probability']
+        days_remaining = results['remaining_useful_life_days']
+        failure_in_7_days = "sì" if results['failure_within_7_days'] else "no"
+        
+        # Determine action based on probability
+        if probability >= 80:
+            action = "sostituzione immediata"
+        elif probability >= 60:
+            action = "manutenzione urgente"
+        elif probability >= 30:
+            action = "manutenzione programmata"
+        elif probability >= 10:
+            action = "monitoraggio intensivo"
+        else:
+            action = "nessuna"
+        
+        # Format the output string
+        formatted_output = (f"{probability}% di probabilità guasto. "
+                        f"Azione consigliata: {action}. "
+                        f"Giorni di vita rimanenti: {days_remaining}. "
+                        f"Guasto entro 7 giorni: {failure_in_7_days}")
+        
+        return formatted_output
 
 
 def main():
@@ -385,11 +417,10 @@ def main():
         
         try:
             result = predictor.predict(test_case)
-            
-            logger.info(f"Failure Probability: {result['failure_probability']}%")
+
+            # Show formatted output as required
+            logger.info(f"OUTPUT: {result['formatted_output']}")
             logger.info(f"Risk Level: {result['risk_level']}")
-            logger.info(f"Failure within 7 days: {result['failure_within_7_days']}")
-            logger.info(f"Remaining useful life: {result['remaining_useful_life_days']} days")
             logger.info(f"Probable cause: {result['failure_cause']}")
             logger.info("Recommendations:")
             for rec in result['recommendations']:

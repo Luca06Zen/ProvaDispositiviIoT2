@@ -16,6 +16,9 @@ import joblib
 import os
 import logging
 from datetime import datetime
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -31,41 +34,41 @@ class ModelTrainer:
         self.training_history = []
         
     def define_models(self):
-        """Define the models to be trained"""
+        """Define the models to be trained with reduced parameter grids"""
         self.models = {
             'classification': {
                 'RandomForest': {
                     'model': RandomForestClassifier(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200, 300],
-                        'max_depth': [10, 15, 20, None],
-                        'min_samples_split': [5, 10, 15],
-                        'min_samples_leaf': [2, 5, 10]
+                        'n_estimators': [100, 200],  # Ridotto da [100, 200, 300]
+                        'max_depth': [10, 15, None],  # Ridotto da [10, 15, 20, None]
+                        'min_samples_split': [5, 10],  # Ridotto da [5, 10, 15]
+                        'min_samples_leaf': [2, 5]  # Ridotto da [2, 5, 10]
                     }
                 },
                 'XGBoost': {
                     'model': xgb.XGBClassifier(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200, 300],
-                        'max_depth': [3, 6, 9],
-                        'learning_rate': [0.01, 0.1, 0.2],
-                        'subsample': [0.8, 0.9, 1.0]
+                        'n_estimators': [100, 200],  # Ridotto da [100, 200, 300]
+                        'max_depth': [3, 6],  # Ridotto da [3, 6, 9]
+                        'learning_rate': [0.1, 0.2],  # Ridotto da [0.01, 0.1, 0.2]
+                        'subsample': [0.8, 1.0]  # Ridotto da [0.8, 0.9, 1.0]
                     }
                 },
                 'SVM': {
                     'model': SVC(random_state=42, probability=True),
                     'params': {
-                        'C': [0.1, 1, 10],
-                        'kernel': ['rbf', 'linear'],
-                        'gamma': ['scale', 'auto']
+                        'C': [1, 10],  # Ridotto da [0.1, 1, 10]
+                        'kernel': ['rbf'],  # Ridotto da ['rbf', 'linear']
+                        'gamma': ['scale']  # Ridotto da ['scale', 'auto']
                     }
                 },
                 'LogisticRegression': {
                     'model': LogisticRegression(random_state=42, max_iter=1000),
                     'params': {
-                        'C': [0.1, 1, 10, 100],
-                        'penalty': ['l1', 'l2'],
-                        'solver': ['liblinear', 'saga']
+                        'C': [0.1, 1, 10],  # Manteniamo questi
+                        'penalty': ['l2'],  # Ridotto da ['l1', 'l2']
+                        'solver': ['liblinear']  # Ridotto da ['liblinear', 'saga']
                     }
                 }
             },
@@ -73,27 +76,27 @@ class ModelTrainer:
                 'RandomForest': {
                     'model': RandomForestRegressor(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200, 300],
-                        'max_depth': [10, 15, 20, None],
-                        'min_samples_split': [5, 10, 15],
-                        'min_samples_leaf': [2, 5, 10]
+                        'n_estimators': [100, 200],  # Ridotto
+                        'max_depth': [10, 15, None],  # Ridotto
+                        'min_samples_split': [5, 10],  # Ridotto
+                        'min_samples_leaf': [2, 5]  # Ridotto
                     }
                 },
                 'XGBoost': {
                     'model': xgb.XGBRegressor(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200, 300],
-                        'max_depth': [3, 6, 9],
-                        'learning_rate': [0.01, 0.1, 0.2],
-                        'subsample': [0.8, 0.9, 1.0]
+                        'n_estimators': [100, 200],  # Ridotto
+                        'max_depth': [3, 6],  # Ridotto
+                        'learning_rate': [0.1, 0.2],  # Ridotto
+                        'subsample': [0.8, 1.0]  # Ridotto
                     }
                 },
                 'SVR': {
                     'model': SVR(),
                     'params': {
-                        'C': [0.1, 1, 10],
-                        'kernel': ['rbf', 'linear'],
-                        'gamma': ['scale', 'auto']
+                        'C': [1, 10],  # Ridotto da [0.1, 1, 10]
+                        'kernel': ['rbf'],  # Ridotto da ['rbf', 'linear']
+                        'gamma': ['scale']  # Ridotto da ['scale', 'auto']
                     }
                 },
                 'LinearRegression': {
@@ -117,11 +120,12 @@ class ModelTrainer:
                 grid_search = GridSearchCV(
                     model_config['model'],
                     model_config['params'],
-                    cv=5,
+                    cv=3,  # Ridotto da 5 a 3
                     scoring='roc_auc',
-                    n_jobs=-1,
-                    verbose=0
+                    n_jobs=2,  # Limitato per evitare sovraccarico
+                    verbose=1  # Cambiato da 0 a 1 per vedere il progresso
                 )
+                logger.info(f"Starting grid search for {model_name}...")
                 grid_search.fit(X_train, y_train)
                 best_model = grid_search.best_estimator_
                 
@@ -155,8 +159,9 @@ class ModelTrainer:
                 'probabilities': y_pred_proba
             }
             
-            logger.info(f"{model_name} - Accuracy: {accuracy:.4f}, F1: {f1:.4f}, ROC-AUC: {roc_auc:.4f if roc_auc else 'N/A'}")
-        
+            roc_auc_str = f"{roc_auc:.4f}" if roc_auc is not None else "N/A"
+            logger.info(f"{model_name} - Accuracy: {accuracy:.4f}, F1: {f1:.4f}, ROC-AUC: {roc_auc_str}")
+
         return classification_results
     
     def train_regression_models(self, X_train, y_train, X_test, y_test):
@@ -169,15 +174,15 @@ class ModelTrainer:
             logger.info(f"Training {model_name} for regression...")
             
             if model_config['params']:
-                # Perform grid search for hyperparameter tuning
                 grid_search = GridSearchCV(
                     model_config['model'],
                     model_config['params'],
-                    cv=5,
+                    cv=3,  # Ridotto da 5 a 3
                     scoring='neg_mean_squared_error',
-                    n_jobs=-1,
-                    verbose=0
+                    n_jobs=2,  # Limitato
+                    verbose=1  # Per vedere il progresso
                 )
+                logger.info(f"Starting grid search for {model_name}...")
                 grid_search.fit(X_train, y_train)
                 best_model = grid_search.best_estimator_
                 
