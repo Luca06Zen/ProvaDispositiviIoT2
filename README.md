@@ -11,10 +11,15 @@ industrial_failure_prediction/
 │   │   ├── train_data.csv
 │   │   └── test_data.csv
 │   └── models/
-│       ├── failure_prediction_model.pkl
-│       ├── scaler.pkl
-│       └── label_encoder.pkl
+│       ├── best_classification_model.pkl
+│       ├── best_regression_model.pkl
+│       ├── label_encoder.pkl
+│       ├── model_info.json
+│       └── scaler.pkl
 ├── src/
+│   ├── __pycache__/
+│   │   ├── prediction_engine.cpython-311.pyc
+│   │   └── utils.cpython-311.pyc
 │   ├── data_preprocessing.py
 │   ├── model_training.py
 │   ├── model_evaluation.py
@@ -29,10 +34,9 @@ industrial_failure_prediction/
 │   │   └── images/
 │   │       ├── logo.png
 │   │       └── favicon.ico
-│   ├── templates/
-│   │   ├── index.html
-│   │   └── results.html
-│   └── app.py
+│   └── templates/
+│       ├── index.html
+│       └── results.html
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb
 │   ├── 02_data_preprocessing.ipynb
@@ -42,6 +46,7 @@ industrial_failure_prediction/
 │   ├── test_model.py
 │   ├── test_preprocessing.py
 │   └── test_predictions.py
+├── app.py
 ├── requirements.txt
 ├── setup.py
 ├── README.md
